@@ -1,0 +1,162 @@
+package org.quickperf.jvm.jmc.value;
+
+import org.openjdk.jmc.common.item.IItem;
+import org.openjdk.jmc.common.item.IItemCollection;
+import org.openjdk.jmc.common.item.IItemIterable;
+import org.openjdk.jmc.common.item.IMemberAccessor;
+import org.openjdk.jmc.common.item.IType;
+import org.openjdk.jmc.common.unit.IQuantity;
+import org.openjdk.jmc.common.unit.QuantityConversionException;
+import org.openjdk.jmc.common.unit.UnitLookup;
+import org.openjdk.jmc.flightrecorder.JfrAttributes;
+import org.openjdk.jmc.flightrecorder.jdk.JdkAggregators;
+import org.openjdk.jmc.flightrecorder.jdk.JdkFilters;
+import org.quickperf.jvm.allocation.AllocationUnit;
+
+/**
+ * Class containing methods that calculate the allocation rate and format the output.
+ *
+ * @author Edward Rose
+ * @version 14/05/2020
+ */
+public class AllocationRate {
+
+  /**
+   * Calculate the allocation rate (per ms) from the collection of Java Flight Recorder Events,
+   * format and return as a String.
+   *
+   * @param jfrEvents IItemCollection jfrEvents
+   * @return allocation rate (per second) as a String
+   */
+  public static String formatAsString(IItemCollection jfrEvents) {
+    if (!jfrEvents.hasItems()) {
+      return "Undefined";
+    }
+    double allocationRateBytesPerSecond;
+    try {
+      allocationRateBytesPerSecond = getAllocationRateBytesPerSecond(jfrEvents);
+    } catch (ArithmeticException exception) {
+      if (exception.getMessage().equals("Division by zero")) {
+        return " ";
+      } else {
+        return "Error during calculation";
+      }
+    }
+    return AllocationRatePerSecondFormatter.INSTANCE
+        .format(allocationRateBytesPerSecond, AllocationUnit.BYTE);
+  }
+
+  /**
+   * Calculate the allocation rate.
+   *
+   * @param jfrEvents IItemCollection jfrEvents
+   * @return rate (bytes per second)
+   */
+  private static double getAllocationRateBytesPerSecond(IItemCollection jfrEvents)
+      throws ArithmeticException {
+    long totalAllocationInBytes = totalAllocationInBytes(jfrEvents);
+    long allocationDurationInMs = allocationDurationInMs(jfrEvents);
+    double allocationDurationInSeconds = allocationDurationInMs / 1000.0;
+    if (allocationDurationInSeconds > 0) {
+      return totalAllocationInBytes / allocationDurationInSeconds;
+    } else if (allocationDurationInSeconds == 0) {
+      throw new ArithmeticException("Division by zero");
+    } else {
+      throw new ArithmeticException("Allocation duration cannot be negative");
+    }
+  }
+
+  /**
+   * Calculate the total allocation in bytes.
+   *
+   * @param jfrEvents IItemCollection jfrEvents
+   * @return total allocation in bytes.
+   * @see <a href="https://github.com/quick-perf/quickperf/issues/64#show_issue">Implementation
+   * Ideas</a>
+   */
+  private static long totalAllocationInBytes(IItemCollection jfrEvents) {
+    IQuantity totalAlloc = jfrEvents.getAggregate(JdkAggregators.ALLOCATION_TOTAL);
+    return totalAlloc.longValue();
+  }
+
+  /**
+   * Calculate the duration of allocation in ms.
+   *
+   * @param jfrEvents IItemCollection jfrEvents
+   * @return allocation duration in ms
+   * @see <a href="https://github.com/quick-perf/quickperf/issues/64#show_issue">Implementation
+   * Ideas</a>
+   */
+  private static long allocationDurationInMs(IItemCollection jfrEvents) {
+    //filter events
+    IItemCollection insideTlab = jfrEvents.apply(JdkFilters.ALLOC_INSIDE_TLAB);
+    IItemCollection outsideTlab = jfrEvents.apply(JdkFilters.ALLOC_OUTSIDE_TLAB);
+    //min timestamp of either events
+    long insideTlabMinTimeStamp = minTimeStampInMs(insideTlab);
+    long outsideTlabMinTimeStamp = minTimeStampInMs(outsideTlab);
+    long minTimeStampInMs = Math.min(insideTlabMinTimeStamp, outsideTlabMinTimeStamp);
+    //max timestamp of either events
+    long insideTlabMaxTimeStamp = maxTimeStampInMs(insideTlab);
+    long outsideTlabMaxTimeStamp = maxTimeStampInMs(outsideTlab);
+    long maxTimeStampInMs = Math.max(insideTlabMaxTimeStamp, outsideTlabMaxTimeStamp);
+    //duration
+    return maxTimeStampInMs - minTimeStampInMs;
+  }
+
+  /**
+   * Iterate through the events and find the minimum time stamp.
+   *
+   * @param jfrEvents IICollection jfrEvents
+   * @return minimum time stamp of event
+   */
+  private static long minTimeStampInMs(IItemCollection jfrEvents) {
+    long minTimeStamp = Long.MAX_VALUE;
+    for (IItemIterable jfrEventCollection : jfrEvents) {
+      for (IItem item : jfrEventCollection) {
+        long currentTimeStamp = getTimeStampInMs(item);
+        minTimeStamp = Math.min(minTimeStamp, currentTimeStamp);
+      }
+    }
+    return minTimeStamp;
+  }
+
+  /**
+   * Iterate through the events and find the maximum time stamp.
+   *
+   * @param jfrEvents IICollection jfrEvents
+   * @return maximum time stamp of event
+   */
+  private static long maxTimeStampInMs(IItemCollection jfrEvents) {
+    long maxTimeStamp = Long.MIN_VALUE;
+    for (IItemIterable jfrEventCollection : jfrEvents) {
+      for (IItem item : jfrEventCollection) {
+        long currentTimeStamp = getTimeStampInMs(item);
+        maxTimeStamp = Math.max(maxTimeStamp, currentTimeStamp);
+      }
+    }
+    return maxTimeStamp;
+  }
+
+  /**
+   * Get the time stamp of an allocation event in ms.
+   *
+   * @param jfrEvent allocation event
+   * @return time stamp in ms
+   * @see <a href="https://github.com/quick-perf/quickperf/issues/64#show_issue">Implementation
+   * Ideas</a>
+   */
+  private static long getTimeStampInMs(IItem jfrEvent) throws ArithmeticException {
+    IType<IItem> type = (IType<IItem>) jfrEvent.getType();
+    IMemberAccessor<IQuantity, IItem> endTimeAccessor = JfrAttributes.END_TIME.getAccessor(type);
+    IQuantity quantityEndTime = endTimeAccessor.getMember(jfrEvent);
+    long timeStampInMs;
+    try {
+      timeStampInMs = quantityEndTime.longValueIn(UnitLookup.EPOCH_MS);
+    } catch (QuantityConversionException e) {
+      System.out.println("Unable to convert the timestamp of a jfr event into ms.");
+      e.printStackTrace();
+      throw new ArithmeticException();
+    }
+    return timeStampInMs;
+  }
+}

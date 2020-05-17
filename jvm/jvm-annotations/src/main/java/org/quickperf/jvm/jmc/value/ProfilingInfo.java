@@ -271,7 +271,6 @@ public enum ProfilingInfo {
     }
     ,
     OS_VERSION {
-
         @Override
         public String formatAsString(IItemCollection jfrEvents) {
             return formatAsString(jfrEvents, JdkAggregators.OS_VERSION, String.class);
@@ -282,8 +281,18 @@ public enum ProfilingInfo {
             return getLabel(JdkAggregators.OS_VERSION, String.class);
         }
 
-    }
-    ;
+    },
+    ALLOCATION_RATE {
+        @Override
+        public String formatAsString(IItemCollection jfrEvents) {
+            return AllocationRate.formatAsString(jfrEvents);
+        }
+
+        @Override
+        public String getLabel() {
+            return "Allocation Rate";
+        }
+    };
 
     public abstract String formatAsString(IItemCollection jfrEvents);
 
@@ -292,7 +301,7 @@ public enum ProfilingInfo {
     @SuppressWarnings("unchecked")
     String getLabel(IAggregator aggregator, Class<?> type) {
 
-        if(type.isAssignableFrom(IQuantity.class)) {
+        if (type.isAssignableFrom(IQuantity.class)) {
             return getLabelFrom(aggregator);
         }
 
