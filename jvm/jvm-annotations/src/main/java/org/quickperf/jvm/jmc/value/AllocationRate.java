@@ -29,17 +29,18 @@ public class AllocationRate {
    * @return allocation rate (per second) as a String
    */
   public static String formatAsString(IItemCollection jfrEvents) {
-    if (!jfrEvents.hasItems()) {
-      return "Undefined";
+    if (jfrEvents == null || !jfrEvents.hasItems()) {
+      return " ";
     }
     double allocationRateBytesPerSecond;
     try {
       allocationRateBytesPerSecond = getAllocationRateBytesPerSecond(jfrEvents);
     } catch (ArithmeticException exception) {
-      if (exception.getMessage().equals("Division by zero")) {
+      if (exception.getMessage().equals("Division by zero")
+          || exception.getMessage().equals("No allocation events")) {
         return " ";
       } else {
-        return "Error during calculation";
+        return "Calculation Error \n";
       }
     }
     return AllocationRatePerSecondFormatter.INSTANCE
@@ -87,31 +88,38 @@ public class AllocationRate {
    * @see <a href="https://github.com/quick-perf/quickperf/issues/64#show_issue">Implementation
    * Ideas</a>
    */
-  private static long allocationDurationInMs(IItemCollection jfrEvents) {
+  private static long allocationDurationInMs(IItemCollection jfrEvents) throws ArithmeticException {
     //filter events
     IItemCollection insideTlab = jfrEvents.apply(JdkFilters.ALLOC_INSIDE_TLAB);
     IItemCollection outsideTlab = jfrEvents.apply(JdkFilters.ALLOC_OUTSIDE_TLAB);
-    //min timestamp of either events
+    if (!outsideTlab.hasItems() && !insideTlab.hasItems()) {
+      throw new ArithmeticException("No allocation events");
+    }
+    // min timestamp of either events
     long insideTlabMinTimeStamp = minTimeStampInMs(insideTlab);
     long outsideTlabMinTimeStamp = minTimeStampInMs(outsideTlab);
     long minTimeStampInMs = Math.min(insideTlabMinTimeStamp, outsideTlabMinTimeStamp);
-    //max timestamp of either events
+    // max timestamp of either events
     long insideTlabMaxTimeStamp = maxTimeStampInMs(insideTlab);
     long outsideTlabMaxTimeStamp = maxTimeStampInMs(outsideTlab);
     long maxTimeStampInMs = Math.max(insideTlabMaxTimeStamp, outsideTlabMaxTimeStamp);
-    //duration
+    // calculate duration
+    if (minTimeStampInMs > maxTimeStampInMs) {
+      throw new ArithmeticException("Allocation duration cannot be negative");
+    }
     return maxTimeStampInMs - minTimeStampInMs;
   }
 
   /**
-   * Iterate through the events and find the minimum time stamp.
+   * Iterate through the allocation events and find the minimum time stamp.
    *
-   * @param jfrEvents IICollection jfrEvents
+   * @param allocationEvents IICollection allocationEvents
    * @return minimum time stamp of event
    */
-  private static long minTimeStampInMs(IItemCollection jfrEvents) {
+  private static long minTimeStampInMs(IItemCollection allocationEvents)
+      throws ArithmeticException {
     long minTimeStamp = Long.MAX_VALUE;
-    for (IItemIterable jfrEventCollection : jfrEvents) {
+    for (IItemIterable jfrEventCollection : allocationEvents) {
       for (IItem item : jfrEventCollection) {
         long currentTimeStamp = getTimeStampInMs(item);
         minTimeStamp = Math.min(minTimeStamp, currentTimeStamp);
@@ -121,14 +129,15 @@ public class AllocationRate {
   }
 
   /**
-   * Iterate through the events and find the maximum time stamp.
+   * Iterate through the allocation events and find the maximum time stamp.
    *
-   * @param jfrEvents IICollection jfrEvents
+   * @param allocationEvents IICollection allocationEvents
    * @return maximum time stamp of event
    */
-  private static long maxTimeStampInMs(IItemCollection jfrEvents) {
-    long maxTimeStamp = Long.MIN_VALUE;
-    for (IItemIterable jfrEventCollection : jfrEvents) {
+  private static long maxTimeStampInMs(IItemCollection allocationEvents)
+      throws ArithmeticException {
+    long maxTimeStamp = 0;
+    for (IItemIterable jfrEventCollection : allocationEvents) {
       for (IItem item : jfrEventCollection) {
         long currentTimeStamp = getTimeStampInMs(item);
         maxTimeStamp = Math.max(maxTimeStamp, currentTimeStamp);
@@ -140,22 +149,25 @@ public class AllocationRate {
   /**
    * Get the time stamp of an allocation event in ms.
    *
-   * @param jfrEvent allocation event
+   * @param allocationEvent allocation event
    * @return time stamp in ms
    * @see <a href="https://github.com/quick-perf/quickperf/issues/64#show_issue">Implementation
    * Ideas</a>
    */
-  private static long getTimeStampInMs(IItem jfrEvent) throws ArithmeticException {
-    IType<IItem> type = (IType<IItem>) jfrEvent.getType();
+  private static long getTimeStampInMs(IItem allocationEvent) throws ArithmeticException {
+    IType<IItem> type = (IType<IItem>) allocationEvent.getType();
     IMemberAccessor<IQuantity, IItem> endTimeAccessor = JfrAttributes.END_TIME.getAccessor(type);
-    IQuantity quantityEndTime = endTimeAccessor.getMember(jfrEvent);
+    IQuantity quantityEndTime = endTimeAccessor.getMember(allocationEvent);
     long timeStampInMs;
     try {
       timeStampInMs = quantityEndTime.longValueIn(UnitLookup.EPOCH_MS);
     } catch (QuantityConversionException e) {
-      System.out.println("Unable to convert the timestamp of a jfr event into ms.");
+      System.out.println("Unable to convert the timestamp of an allocation event into ms.");
       e.printStackTrace();
       throw new ArithmeticException();
+    }
+    if (timeStampInMs < 0) {
+      throw new ArithmeticException("Time stamp cannot be negative");
     }
     return timeStampInMs;
   }
