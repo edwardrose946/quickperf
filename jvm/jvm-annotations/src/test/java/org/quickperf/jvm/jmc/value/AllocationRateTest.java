@@ -73,6 +73,7 @@ public class AllocationRateTest {
    */
 
   @Before
+  @SuppressWarnings("unchecked")
   public void setUpIItemCollection() throws QuantityConversionException {
     mockedJfrEvents = mock(IItemCollection.class);
     mockedJfrEventsIterator = mock(Iterator.class);
