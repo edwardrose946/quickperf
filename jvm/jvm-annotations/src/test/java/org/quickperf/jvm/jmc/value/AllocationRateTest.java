@@ -191,34 +191,6 @@ public class AllocationRateTest {
 
   }
 
-  /**
-   * Negative time stamps could not necessarily be detected if their difference is zero.
-   */
-  @Test
-  public void should_return_a_blanck_message_if_negative_time_stamps() throws QuantityConversionException {
-
-    when(mockedTotalAlloc.longValue()).thenReturn(1000L);
-    when(mockedIQuantity.longValueIn(UnitLookup.EPOCH_MS))
-          .thenReturn(-10L, -10L, -10L, -10L, -10L, -10L, -10L, -10L, -10L, -10L, -10L,
-              -10L);
-
-    assertThat(formatAsString(mockedJfrEvents)).isEqualTo(" ");
-
-  }
-
-  @Test
-  public void should_return_a_blank_message_if_negative_minimum_time_stamps() throws QuantityConversionException {
-
-    when(mockedTotalAlloc.longValue()).thenReturn(1000L);
-    when(mockedIQuantity.longValueIn(UnitLookup.EPOCH_MS))
-          .thenReturn(-10L, -10L, -10L, -10L, -10L, -10L, 10L, 10L, 10L, 10L, 10L,
-              10L);
-
-    assertThat(formatAsString(mockedJfrEvents)).isEqualTo(" ");
-
-  }
-
-
   @Test
   public void should_return_a_blanck_message_if_negative_maximum_time_stamps() throws QuantityConversionException {
 

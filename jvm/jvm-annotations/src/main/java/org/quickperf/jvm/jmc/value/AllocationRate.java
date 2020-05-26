@@ -129,9 +129,6 @@ public class AllocationRate {
             throw new ArithmeticException("Unable to convert the timestamp of an allocation event into ms.");
         }
 
-        if (timeStampInMs < 0) {
-            throw new ArithmeticException("Time stamp cannot be negative");
-        }
         return timeStampInMs;
     }
 
