@@ -19,8 +19,7 @@ public class AllocationRatePerSecondFormatter {
 
   public static final AllocationRatePerSecondFormatter INSTANCE = new AllocationRatePerSecondFormatter();
 
-  private AllocationRatePerSecondFormatter() {
-  }
+  private AllocationRatePerSecondFormatter() { }
 
   public String format(double allocationRate, AllocationUnit allocationUnit) {
     // convert to appropriate byte measure unit

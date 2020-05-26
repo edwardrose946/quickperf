@@ -45,7 +45,7 @@ public class AllocationRate {
     }
     double allocationRateBytesPerSecond;
     try {
-      allocationRateBytesPerSecond = getAllocationRateBytesPerSecond(jfrEvents);
+      allocationRateBytesPerSecond = computeAllocationRateInBytesPerSecond(jfrEvents);
     } catch (ArithmeticException exception) {
       if (exception.getMessage().equals("Division by zero")
           || exception.getMessage().equals("No allocation events")) {
@@ -55,19 +55,13 @@ public class AllocationRate {
       }
     }
     return AllocationRatePerSecondFormatter.INSTANCE
-        .format(allocationRateBytesPerSecond, AllocationUnit.BYTE);
+          .format(allocationRateBytesPerSecond, AllocationUnit.BYTE);
   }
 
-  /**
-   * Calculate the allocation rate.
-   *
-   * @param jfrEvents IItemCollection jfrEvents
-   * @return rate (bytes per second)
-   */
-  private static double getAllocationRateBytesPerSecond(IItemCollection jfrEvents)
+  private static double computeAllocationRateInBytesPerSecond(IItemCollection jfrEvents)
       throws ArithmeticException {
-    long totalAllocationInBytes = totalAllocationInBytes(jfrEvents);
-    long allocationDurationInMs = allocationDurationInMs(jfrEvents);
+    long totalAllocationInBytes = computeTotalAllocationInBytes(jfrEvents);
+    long allocationDurationInMs = computeAllocationDurationInMs(jfrEvents);
     double allocationDurationInSeconds = allocationDurationInMs / 1000.0;
     if (allocationDurationInSeconds > 0) {
       return totalAllocationInBytes / allocationDurationInSeconds;
@@ -78,41 +72,24 @@ public class AllocationRate {
     }
   }
 
-  /**
-   * Calculate the total allocation in bytes.
-   *
-   * @param jfrEvents IItemCollection jfrEvents
-   * @return total allocation in bytes.
-   * @see <a href="https://github.com/quick-perf/quickperf/issues/64#show_issue">Implementation
-   * Ideas</a>
-   */
-  private static long totalAllocationInBytes(IItemCollection jfrEvents) {
+  private static long computeTotalAllocationInBytes(IItemCollection jfrEvents) {
     IQuantity totalAlloc = jfrEvents.getAggregate(JdkAggregators.ALLOCATION_TOTAL);
     return totalAlloc.longValue();
   }
 
-  /**
-   * Calculate the duration of allocation in ms.
-   *
-   * @param jfrEvents IItemCollection jfrEvents
-   * @return allocation duration in ms
-   * @see <a href="https://github.com/quick-perf/quickperf/issues/64#show_issue">Implementation
-   * Ideas</a>
-   */
-  private static long allocationDurationInMs(IItemCollection jfrEvents) throws ArithmeticException {
-    //filter events
+  private static long computeAllocationDurationInMs(IItemCollection jfrEvents) throws ArithmeticException {
     IItemCollection insideTlab = jfrEvents.apply(JdkFilters.ALLOC_INSIDE_TLAB);
     IItemCollection outsideTlab = jfrEvents.apply(JdkFilters.ALLOC_OUTSIDE_TLAB);
     if (!outsideTlab.hasItems() && !insideTlab.hasItems()) {
       throw new ArithmeticException("No allocation events");
     }
     // min timestamp of either events
-    long insideTlabMinTimeStamp = minTimeStampInMs(insideTlab);
-    long outsideTlabMinTimeStamp = minTimeStampInMs(outsideTlab);
+    long insideTlabMinTimeStamp = computeMinTimeStampInMs(insideTlab);
+    long outsideTlabMinTimeStamp = computeMinTimeStampInMs(outsideTlab);
     long minTimeStampInMs = Math.min(insideTlabMinTimeStamp, outsideTlabMinTimeStamp);
     // max timestamp of either events
-    long insideTlabMaxTimeStamp = maxTimeStampInMs(insideTlab);
-    long outsideTlabMaxTimeStamp = maxTimeStampInMs(outsideTlab);
+    long insideTlabMaxTimeStamp = computeMaxTimeStampInMs(insideTlab);
+    long outsideTlabMaxTimeStamp = computeMaxTimeStampInMs(outsideTlab);
     long maxTimeStampInMs = Math.max(insideTlabMaxTimeStamp, outsideTlabMaxTimeStamp);
     // calculate duration
     if (minTimeStampInMs > maxTimeStampInMs) {
@@ -121,13 +98,7 @@ public class AllocationRate {
     return maxTimeStampInMs - minTimeStampInMs;
   }
 
-  /**
-   * Iterate through the allocation events and find the minimum time stamp.
-   *
-   * @param allocationEvents IICollection allocationEvents
-   * @return minimum time stamp of event
-   */
-  private static long minTimeStampInMs(IItemCollection allocationEvents)
+  private static long computeMinTimeStampInMs(IItemCollection allocationEvents)
       throws ArithmeticException {
     long minTimeStamp = Long.MAX_VALUE;
     for (IItemIterable jfrEventCollection : allocationEvents) {
@@ -139,13 +110,7 @@ public class AllocationRate {
     return minTimeStamp;
   }
 
-  /**
-   * Iterate through the allocation events and find the maximum time stamp.
-   *
-   * @param allocationEvents IICollection allocationEvents
-   * @return maximum time stamp of event
-   */
-  private static long maxTimeStampInMs(IItemCollection allocationEvents)
+  private static long computeMaxTimeStampInMs(IItemCollection allocationEvents)
       throws ArithmeticException {
     long maxTimeStamp = 0;
     for (IItemIterable jfrEventCollection : allocationEvents) {
@@ -157,19 +122,13 @@ public class AllocationRate {
     return maxTimeStamp;
   }
 
-  /**
-   * Get the time stamp of an allocation event in ms.
-   *
-   * @param allocationEvent allocation event
-   * @return time stamp in ms
-   * @see <a href="https://github.com/quick-perf/quickperf/issues/64#show_issue">Implementation
-   * Ideas</a>
-   */
   private static long getTimeStampInMs(IItem allocationEvent) throws ArithmeticException {
+
     IType<IItem> type = (IType<IItem>) allocationEvent.getType();
     IMemberAccessor<IQuantity, IItem> endTimeAccessor = JfrAttributes.END_TIME.getAccessor(type);
     IQuantity quantityEndTime = endTimeAccessor.getMember(allocationEvent);
     long timeStampInMs;
+
     try {
       timeStampInMs = quantityEndTime.longValueIn(UnitLookup.EPOCH_MS);
     } catch (QuantityConversionException e) {
@@ -177,9 +136,11 @@ public class AllocationRate {
       e.printStackTrace();
       throw new ArithmeticException();
     }
+
     if (timeStampInMs < 0) {
       throw new ArithmeticException("Time stamp cannot be negative");
     }
     return timeStampInMs;
   }
+
 }
