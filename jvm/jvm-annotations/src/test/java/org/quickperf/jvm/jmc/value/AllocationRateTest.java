@@ -1,25 +1,21 @@
 package org.quickperf.jvm.jmc.value;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-import static org.quickperf.jvm.jmc.value.AllocationRate.*;
-
-import java.util.Iterator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.openjdk.jmc.common.item.IAccessorKey;
-import org.openjdk.jmc.common.item.IAggregator;
-import org.openjdk.jmc.common.item.IItem;
-import org.openjdk.jmc.common.item.IItemCollection;
-import org.openjdk.jmc.common.item.IItemIterable;
-import org.openjdk.jmc.common.item.IMemberAccessor;
+import org.openjdk.jmc.common.item.*;
 import org.openjdk.jmc.common.unit.IQuantity;
 import org.openjdk.jmc.common.unit.QuantityConversionException;
 import org.openjdk.jmc.common.unit.StructContentType;
 import org.openjdk.jmc.common.unit.UnitLookup;
 import org.openjdk.jmc.flightrecorder.jdk.JdkFilters;
+
+import java.util.Iterator;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+import static org.quickperf.jvm.jmc.value.AllocationRate.formatAsString;
 
 class AllocationRateTest {
 
@@ -66,7 +62,7 @@ class AllocationRateTest {
    */
 
   @BeforeEach
-  public void setUpIItemCollection() {
+  public void setUpIItemCollection() throws QuantityConversionException {
     mockedJfrEvents = mock(IItemCollection.class);
     mockedJfrEventsIterator = mock(Iterator.class);
     mockedTotalAlloc = mock(IQuantity.class);
@@ -116,132 +112,112 @@ class AllocationRateTest {
 
     when(mockedIMemberAccessor.getMember(any(IItem.class))).thenReturn(mockedIQuantity);
 
-    try {
-      when(mockedIQuantity.longValueIn(UnitLookup.EPOCH_MS))
+    when(mockedIQuantity.longValueIn(UnitLookup.EPOCH_MS))
           .thenReturn(1000L, 2000L, 3000L, 10_000L, 10_000L, 11_000L, 1000L, 2000L, 3000L, 10000L,
               11000L, 11000L);
-    } catch (QuantityConversionException e) {
-      e.printStackTrace();
-    }
   }
 
   /**
    * 1 KiB over 10 seconds.
    */
   @Test
-  void format100BytesPerSecondAsString() {
+  void should_format_100_bytes_per_second_as_string() {
+
     when(mockedTotalAlloc.longValue()).thenReturn(1024L);
 
-    String expected = "102.4 bytes/s";
-    String actual = formatAsString(mockedJfrEvents);
-    assertEquals(expected, actual);
+    assertThat(formatAsString(mockedJfrEvents)).isEqualTo("102.4 bytes/s");
+
   }
 
   /**
    * 1 MiB over 10 seconds.
    */
   @Test
-  void format100KiBPerSecondAsString() {
+  void should_format_100_ki_b_per_second_as_string() {
+
     when(mockedTotalAlloc.longValue()).thenReturn(1024L * 1024L);
 
-    String expected = "102.4 KiB/s";
-    String actual = formatAsString(mockedJfrEvents);
-    assertEquals(expected, actual);
+    assertThat(formatAsString(mockedJfrEvents)).isEqualTo("102.4 KiB/s");
+
   }
 
   /**
    * 1 GiB over 10 seconds.
    */
   @Test
-  void format100MiBPerSecondAsString() {
+  void should_format_100_mi_b_per_second_as_string() {
+
     when(mockedTotalAlloc.longValue()).thenReturn((long) Math.pow(1024L, 3));
 
-    String expected = "102.4 MiB/s";
-    String actual = formatAsString(mockedJfrEvents);
-    assertEquals(expected, actual);
+    assertThat(formatAsString(mockedJfrEvents)).isEqualTo("102.4 MiB/s");
+
   }
 
   /**
    * 1 TiB over 10 seconds.
    */
   @Test
-  void format100GiBPerSecondAsString() {
+  void should_format100_giga_bytes_per_second_as_string() {
+
     when(mockedTotalAlloc.longValue()).thenReturn((long) Math.pow(1024, 4));
 
-    String expected = "102.4 GiB/s";
-    String actual = formatAsString(mockedJfrEvents);
-    assertEquals(expected, actual);
+    assertThat(formatAsString(mockedJfrEvents)).isEqualTo("102.4 GiB/s");
+
   }
 
   /**
    * Difference between allocation time stamps is zero, therefore the rate should return " ".
    */
   @Test
-  void allZeroTimeStamps() {
+  void should_return_an_empty_string_if_all_zero_time_stamps() throws QuantityConversionException {
+
     when(mockedTotalAlloc.longValue()).thenReturn(1000L);
-    try {
-      when(mockedIQuantity.longValueIn(UnitLookup.EPOCH_MS))
+    when(mockedIQuantity.longValueIn(UnitLookup.EPOCH_MS))
           .thenReturn(0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
               0L);
-    } catch (QuantityConversionException e) {
-      e.printStackTrace();
-    }
 
-    String expected = " ";
-    String actual = formatAsString(mockedJfrEvents);
-    assertEquals(expected, actual);
+    assertThat(formatAsString(mockedJfrEvents)).isEqualTo(" ");
+
   }
 
   /**
    * Negative time stamps could not necessarily be detected if their difference is zero.
    */
   @Test
-  void negativeTimeStamps() {
+  void should_return_a_calculation_error_message_if_negative_time_stamps() throws QuantityConversionException {
+
     when(mockedTotalAlloc.longValue()).thenReturn(1000L);
-    try {
-      when(mockedIQuantity.longValueIn(UnitLookup.EPOCH_MS))
+    when(mockedIQuantity.longValueIn(UnitLookup.EPOCH_MS))
           .thenReturn(-10L, -10L, -10L, -10L, -10L, -10L, -10L, -10L, -10L, -10L, -10L,
               -10L);
-    } catch (QuantityConversionException e) {
-      e.printStackTrace();
-    }
 
-    String expected = "Calculation Error " + System.lineSeparator();
-    String actual = formatAsString(mockedJfrEvents);
-    assertEquals(expected, actual);
+    assertThat(formatAsString(mockedJfrEvents)).isEqualTo("Calculation Error " + System.lineSeparator());
+
   }
 
   @Test
-  void negativeMinimumTimeStamps() {
+  void  should_return_a_calculation_error_message_if_negative_minimum_time_stamps() throws QuantityConversionException {
+
     when(mockedTotalAlloc.longValue()).thenReturn(1000L);
-    try {
-      when(mockedIQuantity.longValueIn(UnitLookup.EPOCH_MS))
+    when(mockedIQuantity.longValueIn(UnitLookup.EPOCH_MS))
           .thenReturn(-10L, -10L, -10L, -10L, -10L, -10L, 10L, 10L, 10L, 10L, 10L,
               10L);
-    } catch (QuantityConversionException e) {
-      e.printStackTrace();
-    }
 
-    String expected = "Calculation Error " + System.lineSeparator();
-    String actual = formatAsString(mockedJfrEvents);
-    assertEquals(expected, actual);
+    assertThat(formatAsString(mockedJfrEvents)).isEqualTo("Calculation Error " + System.lineSeparator());
+
   }
 
 
   @Test
-  void negativeMaximumTimeStamps() {
+  void should_return_a_calculation_error_message_if_negative_maximum_time_stamps() throws QuantityConversionException {
+
     when(mockedTotalAlloc.longValue()).thenReturn(1000L);
-    try {
-      when(mockedIQuantity.longValueIn(UnitLookup.EPOCH_MS))
+    when(mockedIQuantity.longValueIn(UnitLookup.EPOCH_MS))
           .thenReturn(10L, 10L, 10L, 10L, 10L, 10L, -10L, -10L, -10L, -10L, -10L,
               -10L);
-    } catch (QuantityConversionException e) {
-      e.printStackTrace();
-    }
 
-    String expected = "Calculation Error " + System.lineSeparator();
-    String actual = formatAsString(mockedJfrEvents);
-    assertEquals(expected, actual);
+    assertThat(formatAsString(mockedJfrEvents)).isEqualTo("Calculation Error " + System.lineSeparator());
+
   }
 
   /**
@@ -249,46 +225,44 @@ class AllocationRateTest {
    * negative and give an incorrect result.
    */
   @Test
-  void minimumTimeStampsGreaterThanMaximumTimeStamps() {
+  void should_return_a_calculation_error_message_if_mimum_time_stamps_greater_than_maximum_time_stamps() throws QuantityConversionException {
+
     when(mockedTotalAlloc.longValue()).thenReturn(1000L);
-    try {
-      when(mockedIQuantity.longValueIn(UnitLookup.EPOCH_MS))
+    when(mockedIQuantity.longValueIn(UnitLookup.EPOCH_MS))
           .thenReturn(10L, 10L, 10L, 10L, 10L, 10L, 5L, 5L, 5L, 5L, 5L,
               5L);
-    } catch (QuantityConversionException e) {
-      e.printStackTrace();
-    }
 
-    String expected = "Calculation Error " + System.lineSeparator();
-    String actual = formatAsString(mockedJfrEvents);
-    assertEquals(expected, actual);
+    assertThat(formatAsString(mockedJfrEvents))
+            .isEqualTo("Calculation Error " + System.lineSeparator());
+
   }
 
   @Test
   void formatStringOfEmptyCollection() {
+
     IItemCollection empty = mock(IItemCollection.class);
     when(empty.hasItems()).thenReturn(false);
 
-    String expected = " ";
-    String actual = formatAsString(empty);
-    assertEquals(expected, actual);
+    assertThat(formatAsString(empty)).isEqualTo(" ");
+
   }
 
   @Test
-  void formatStringNullCollection() {
+  void should_return_a_blank_string_if_null_item_collection() {
+
     IItemCollection nullCollection = null;
 
-    String expected = " ";
-    String actual = formatAsString(nullCollection);
-    assertEquals(expected, actual);
+    assertThat(formatAsString(nullCollection)).isEqualTo(" ");
+
   }
 
   @Test
-  void emptyInsideAndOutsideTlabCollections() {
-    when(mockedJfrEvents.hasItems()).thenReturn(true, false,false);
+  void should_return_a_blank_string_if_no_jfr_event() {
 
-    String expected = " ";
-    String actual = formatAsString(mockedJfrEvents);
-    assertEquals(expected, actual);
+    when(mockedJfrEvents.hasItems()).thenReturn(true, false, false);
+
+    assertThat(formatAsString(mockedJfrEvents)).isEqualTo(" ");
+
   }
+
 }
