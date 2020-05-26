@@ -192,7 +192,7 @@ public class AllocationRateTest {
   }
 
   @Test
-  public void should_return_a_blanck_message_if_negative_maximum_time_stamps() throws QuantityConversionException {
+  public void should_return_a_blank_message_if_negative_maximum_time_stamps() throws QuantityConversionException {
 
     when(mockedTotalAlloc.longValue()).thenReturn(1000L);
     when(mockedIQuantity.longValueIn(UnitLookup.EPOCH_MS))
