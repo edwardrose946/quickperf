@@ -26,121 +26,114 @@ import org.quickperf.jvm.allocation.AllocationUnit;
 
 /**
  * Class containing methods that calculate the allocation rate and format the output.
- *
- * @author Edward Rose
- * @version 14/05/2020
  */
 public class AllocationRate {
 
-  /**
-   * Calculate the allocation rate (per ms) from the collection of Java Flight Recorder Events,
-   * format and return as a String.
-   *
-   * @param jfrEvents IItemCollection jfrEvents
-   * @return allocation rate (per second) as a String
-   */
-  public static String formatAsString(IItemCollection jfrEvents) {
-    if (jfrEvents == null || !jfrEvents.hasItems()) {
-      return " ";
-    }
-    double allocationRateBytesPerSecond;
-    try {
-      allocationRateBytesPerSecond = computeAllocationRateInBytesPerSecond(jfrEvents);
-    } catch (ArithmeticException exception) {
-      if (exception.getMessage().equals("Division by zero")
-          || exception.getMessage().equals("No allocation events")) {
-        return " ";
-      } else {
-        return "Calculation Error " + System.lineSeparator();
-      }
-    }
-    return AllocationRatePerSecondFormatter.INSTANCE
-          .format(allocationRateBytesPerSecond, AllocationUnit.BYTE);
-  }
-
-  private static double computeAllocationRateInBytesPerSecond(IItemCollection jfrEvents)
-      throws ArithmeticException {
-    long totalAllocationInBytes = computeTotalAllocationInBytes(jfrEvents);
-    long allocationDurationInMs = computeAllocationDurationInMs(jfrEvents);
-    double allocationDurationInSeconds = allocationDurationInMs / 1000.0;
-    if (allocationDurationInSeconds > 0) {
-      return totalAllocationInBytes / allocationDurationInSeconds;
-    } else if (allocationDurationInSeconds == 0) {
-      throw new ArithmeticException("Division by zero");
-    } else {
-      throw new ArithmeticException("Allocation duration cannot be negative");
-    }
-  }
-
-  private static long computeTotalAllocationInBytes(IItemCollection jfrEvents) {
-    IQuantity totalAlloc = jfrEvents.getAggregate(JdkAggregators.ALLOCATION_TOTAL);
-    return totalAlloc.longValue();
-  }
-
-  private static long computeAllocationDurationInMs(IItemCollection jfrEvents) throws ArithmeticException {
-    IItemCollection insideTlab = jfrEvents.apply(JdkFilters.ALLOC_INSIDE_TLAB);
-    IItemCollection outsideTlab = jfrEvents.apply(JdkFilters.ALLOC_OUTSIDE_TLAB);
-    if (!outsideTlab.hasItems() && !insideTlab.hasItems()) {
-      throw new ArithmeticException("No allocation events");
-    }
-    // min timestamp of either events
-    long insideTlabMinTimeStamp = computeMinTimeStampInMs(insideTlab);
-    long outsideTlabMinTimeStamp = computeMinTimeStampInMs(outsideTlab);
-    long minTimeStampInMs = Math.min(insideTlabMinTimeStamp, outsideTlabMinTimeStamp);
-    // max timestamp of either events
-    long insideTlabMaxTimeStamp = computeMaxTimeStampInMs(insideTlab);
-    long outsideTlabMaxTimeStamp = computeMaxTimeStampInMs(outsideTlab);
-    long maxTimeStampInMs = Math.max(insideTlabMaxTimeStamp, outsideTlabMaxTimeStamp);
-    // calculate duration
-    if (minTimeStampInMs > maxTimeStampInMs) {
-      throw new ArithmeticException("Allocation duration cannot be negative");
-    }
-    return maxTimeStampInMs - minTimeStampInMs;
-  }
-
-  private static long computeMinTimeStampInMs(IItemCollection allocationEvents)
-      throws ArithmeticException {
-    long minTimeStamp = Long.MAX_VALUE;
-    for (IItemIterable jfrEventCollection : allocationEvents) {
-      for (IItem item : jfrEventCollection) {
-        long currentTimeStamp = getTimeStampInMs(item);
-        minTimeStamp = Math.min(minTimeStamp, currentTimeStamp);
-      }
-    }
-    return minTimeStamp;
-  }
-
-  private static long computeMaxTimeStampInMs(IItemCollection allocationEvents)
-      throws ArithmeticException {
-    long maxTimeStamp = 0;
-    for (IItemIterable jfrEventCollection : allocationEvents) {
-      for (IItem item : jfrEventCollection) {
-        long currentTimeStamp = getTimeStampInMs(item);
-        maxTimeStamp = Math.max(maxTimeStamp, currentTimeStamp);
-      }
-    }
-    return maxTimeStamp;
-  }
-
-  private static long getTimeStampInMs(IItem allocationEvent) throws ArithmeticException {
-
-    IType<IItem> type = (IType<IItem>) allocationEvent.getType();
-    IMemberAccessor<IQuantity, IItem> endTimeAccessor = JfrAttributes.END_TIME.getAccessor(type);
-    IQuantity quantityEndTime = endTimeAccessor.getMember(allocationEvent);
-    long timeStampInMs;
-
-    try {
-      timeStampInMs = quantityEndTime.longValueIn(UnitLookup.EPOCH_MS);
-    } catch (QuantityConversionException e) {
-      System.out.println("Unable to convert the timestamp of an allocation event into ms.");
-      e.printStackTrace();
-      throw new ArithmeticException();
+    /**
+     * Calculate the allocation rate (per ms) from the collection of Java Flight Recorder Events,
+     * format and return as a String.
+     *
+     * @param jfrEvents IItemCollection jfrEvents
+     * @return allocation rate (per second) as a String
+     */
+    public static String formatAsString(IItemCollection jfrEvents) {
+        if (jfrEvents == null || !jfrEvents.hasItems()) {
+            return " ";
+        }
+        double allocationRateInBytesPerSecond;
+        try {
+            allocationRateInBytesPerSecond = computeAllocationRateInBytesPerSecond(jfrEvents);
+        } catch (ArithmeticException exception) {
+            exception.printStackTrace();
+            return " ";
+        }
+        return AllocationRatePerSecondFormatter.INSTANCE
+                .format(allocationRateInBytesPerSecond, AllocationUnit.BYTE);
     }
 
-    if (timeStampInMs < 0) {
-      throw new ArithmeticException("Time stamp cannot be negative");
+    private static double computeAllocationRateInBytesPerSecond(IItemCollection jfrEvents)
+            throws ArithmeticException {
+        long totalAllocationInBytes = computeTotalAllocationInBytes(jfrEvents);
+        long allocationDurationInMs = computeAllocationDurationInMs(jfrEvents);
+        double allocationDurationInSeconds = allocationDurationInMs / 1000.0;
+        if (allocationDurationInSeconds > 0) {
+            return totalAllocationInBytes / allocationDurationInSeconds;
+        } else if (allocationDurationInSeconds == 0) {
+            throw new ArithmeticException("Division by zero");
+        } else {
+            throw new ArithmeticException("Allocation duration cannot be negative");
+        }
     }
-    return timeStampInMs;
-  }
+
+    private static long computeTotalAllocationInBytes(IItemCollection jfrEvents) {
+        IQuantity totalAlloc = jfrEvents.getAggregate(JdkAggregators.ALLOCATION_TOTAL);
+        return totalAlloc.longValue();
+    }
+
+    private static long computeAllocationDurationInMs(IItemCollection jfrEvents) throws ArithmeticException {
+        IItemCollection insideTlab = jfrEvents.apply(JdkFilters.ALLOC_INSIDE_TLAB);
+        IItemCollection outsideTlab = jfrEvents.apply(JdkFilters.ALLOC_OUTSIDE_TLAB);
+        if (!outsideTlab.hasItems() && !insideTlab.hasItems()) {
+            throw new ArithmeticException("No allocation events");
+        }
+        // min timestamp of either events
+        long insideTlabMinTimeStamp = computeMinTimeStampInMs(insideTlab);
+        long outsideTlabMinTimeStamp = computeMinTimeStampInMs(outsideTlab);
+        long minTimeStampInMs = Math.min(insideTlabMinTimeStamp, outsideTlabMinTimeStamp);
+        // max timestamp of either events
+        long insideTlabMaxTimeStamp = computeMaxTimeStampInMs(insideTlab);
+        long outsideTlabMaxTimeStamp = computeMaxTimeStampInMs(outsideTlab);
+        long maxTimeStampInMs = Math.max(insideTlabMaxTimeStamp, outsideTlabMaxTimeStamp);
+        // calculate duration
+        if (minTimeStampInMs > maxTimeStampInMs) {
+            throw new ArithmeticException("Allocation duration cannot be negative");
+        }
+        return maxTimeStampInMs - minTimeStampInMs;
+    }
+
+    private static long computeMinTimeStampInMs(IItemCollection allocationEvents)
+            throws ArithmeticException {
+        long minTimeStamp = Long.MAX_VALUE;
+        for (IItemIterable jfrEventCollection : allocationEvents) {
+            for (IItem item : jfrEventCollection) {
+                long currentTimeStamp = getTimeStampInMs(item);
+                minTimeStamp = Math.min(minTimeStamp, currentTimeStamp);
+            }
+        }
+        return minTimeStamp;
+    }
+
+    private static long computeMaxTimeStampInMs(IItemCollection allocationEvents)
+            throws ArithmeticException {
+        long maxTimeStamp = 0;
+        for (IItemIterable jfrEventCollection : allocationEvents) {
+            for (IItem item : jfrEventCollection) {
+                long currentTimeStamp = getTimeStampInMs(item);
+                maxTimeStamp = Math.max(maxTimeStamp, currentTimeStamp);
+            }
+        }
+        return maxTimeStamp;
+    }
+
+    private static long getTimeStampInMs(IItem allocationEvent) throws ArithmeticException {
+
+        IType<IItem> type = (IType<IItem>) allocationEvent.getType();
+        IMemberAccessor<IQuantity, IItem> endTimeAccessor = JfrAttributes.END_TIME.getAccessor(type);
+        IQuantity quantityEndTime = endTimeAccessor.getMember(allocationEvent);
+        long timeStampInMs;
+
+        try {
+            timeStampInMs = quantityEndTime.longValueIn(UnitLookup.EPOCH_MS);
+        } catch (QuantityConversionException e) {
+            System.out.println("Unable to convert the timestamp of an allocation event into ms.");
+            e.printStackTrace();
+            throw new ArithmeticException();
+        }
+
+        if (timeStampInMs < 0) {
+            throw new ArithmeticException("Time stamp cannot be negative");
+        }
+        return timeStampInMs;
+    }
 
 }

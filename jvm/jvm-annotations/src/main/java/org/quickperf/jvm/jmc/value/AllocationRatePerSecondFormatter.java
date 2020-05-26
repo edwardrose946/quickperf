@@ -23,8 +23,9 @@ public class AllocationRatePerSecondFormatter {
 
   public String format(double allocationRate, AllocationUnit allocationUnit) {
     // convert to appropriate byte measure unit
+    Allocation allocation = new Allocation(allocationRate, allocationUnit);
     String format = ByteAllocationMeasureFormatter.INSTANCE
-        .format(new Allocation(allocationRate, allocationUnit));
+        .format(allocation);
     String target = format.split("\\s\\(")[0];
     return abbreviate(target);
   }
@@ -32,11 +33,14 @@ public class AllocationRatePerSecondFormatter {
   private String abbreviate(String target) {
     if (target.contains("Kilo bytes")) {
       return target.replace("Kilo bytes", "KiB/s");
-    } else if (target.contains("Mega bytes")) {
+    }
+    if (target.contains("Mega bytes")) {
       return target.replace("Mega bytes", "MiB/s");
-    } else if (target.contains("Giga bytes")) {
+    }
+    if (target.contains("Giga bytes")) {
       return target.replace("Giga bytes", "GiB/s");
     }
     return target.replace("bytes", "bytes/s");
   }
+
 }
