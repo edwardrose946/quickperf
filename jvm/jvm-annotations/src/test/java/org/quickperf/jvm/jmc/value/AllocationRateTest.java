@@ -169,7 +169,7 @@ public class AllocationRateTest {
    * 1 TiB over 10 seconds.
    */
   @Test
-  public void should_format100_giga_bytes_per_second_as_string() {
+  public void should_format_100_giga_bytes_per_second_as_string() {
 
     when(mockedTotalAlloc.longValue()).thenReturn((long) Math.pow(1024, 4));
 

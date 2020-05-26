@@ -22,7 +22,7 @@ import org.openjdk.jmc.common.unit.UnitLookup;
 import org.openjdk.jmc.flightrecorder.JfrAttributes;
 import org.openjdk.jmc.flightrecorder.jdk.JdkAggregators;
 import org.openjdk.jmc.flightrecorder.jdk.JdkFilters;
-import org.quickperf.jvm.allocation.AllocationUnit;
+import org.quickperf.jvm.allocation.ByteAllocationMeasureFormatter;
 
 /**
  * Class containing methods that calculate the allocation rate and format the output.
@@ -48,8 +48,8 @@ public class AllocationRate {
             exception.printStackTrace();
             return " ";
         }
-        return AllocationRatePerSecondFormatter.INSTANCE
-                .format(allocationRateInBytesPerSecond, AllocationUnit.BYTE);
+        return ByteAllocationMeasureFormatter.INSTANCE.shortFormat(allocationRateInBytesPerSecond) + "/s";
+
     }
 
     private static double computeAllocationRateInBytesPerSecond(IItemCollection jfrEvents)
