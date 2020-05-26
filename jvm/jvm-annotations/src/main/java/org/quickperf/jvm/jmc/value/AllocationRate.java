@@ -40,6 +40,7 @@ public class AllocationRate {
         if (jfrEvents == null || !jfrEvents.hasItems()) {
             return " ";
         }
+
         double allocationRateInBytesPerSecond;
         try {
             allocationRateInBytesPerSecond = computeAllocationRateInBytesPerSecond(jfrEvents);
@@ -125,9 +126,7 @@ public class AllocationRate {
         try {
             timeStampInMs = quantityEndTime.longValueIn(UnitLookup.EPOCH_MS);
         } catch (QuantityConversionException e) {
-            System.out.println("Unable to convert the timestamp of an allocation event into ms.");
-            e.printStackTrace();
-            throw new ArithmeticException();
+            throw new ArithmeticException("Unable to convert the timestamp of an allocation event into ms.");
         }
 
         if (timeStampInMs < 0) {
