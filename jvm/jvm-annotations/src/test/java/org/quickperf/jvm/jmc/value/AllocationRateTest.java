@@ -206,7 +206,7 @@ class AllocationRateTest {
       e.printStackTrace();
     }
 
-    String expected = "Calculation Error";
+    String expected = "Calculation Error " + System.lineSeparator();
     String actual = formatAsString(mockedJfrEvents);
     assertEquals(expected, actual);
   }
@@ -222,7 +222,7 @@ class AllocationRateTest {
       e.printStackTrace();
     }
 
-    String expected = "Calculation Error";
+    String expected = "Calculation Error " + System.lineSeparator();
     String actual = formatAsString(mockedJfrEvents);
     assertEquals(expected, actual);
   }
@@ -239,7 +239,7 @@ class AllocationRateTest {
       e.printStackTrace();
     }
 
-    String expected = "Calculation Error";
+    String expected = "Calculation Error " + System.lineSeparator();
     String actual = formatAsString(mockedJfrEvents);
     assertEquals(expected, actual);
   }
@@ -259,7 +259,7 @@ class AllocationRateTest {
       e.printStackTrace();
     }
 
-    String expected = "Calculation Error";
+    String expected = "Calculation Error " + System.lineSeparator();
     String actual = formatAsString(mockedJfrEvents);
     assertEquals(expected, actual);
   }

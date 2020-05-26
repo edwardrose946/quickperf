@@ -40,7 +40,7 @@ public class AllocationRate {
           || exception.getMessage().equals("No allocation events")) {
         return " ";
       } else {
-        return "Calculation Error \n";
+        return "Calculation Error " + System.lineSeparator();
       }
     }
     return AllocationRatePerSecondFormatter.INSTANCE
