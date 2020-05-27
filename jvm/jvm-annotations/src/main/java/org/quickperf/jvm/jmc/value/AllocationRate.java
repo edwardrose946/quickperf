@@ -84,10 +84,6 @@ public class AllocationRate {
 
         long maxTimeStampInMs = searchMaxTimeStampInMs(insideTlab, outsideTlab);
 
-        if (minTimeStampInMs > maxTimeStampInMs) {
-            throw new ArithmeticException("Allocation duration cannot be negative");
-        }
-
         return maxTimeStampInMs - minTimeStampInMs;
 
     }
