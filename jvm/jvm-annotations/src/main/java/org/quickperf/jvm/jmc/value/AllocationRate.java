@@ -72,24 +72,37 @@ public class AllocationRate {
     }
 
     private static long computeAllocationDurationInMs(IItemCollection jfrEvents) throws ArithmeticException {
+
         IItemCollection insideTlab = jfrEvents.apply(JdkFilters.ALLOC_INSIDE_TLAB);
         IItemCollection outsideTlab = jfrEvents.apply(JdkFilters.ALLOC_OUTSIDE_TLAB);
+
         if (!outsideTlab.hasItems() && !insideTlab.hasItems()) {
             throw new ArithmeticException("No allocation events");
         }
-        // min timestamp of either events
-        long insideTlabMinTimeStamp = computeMinTimeStampInMs(insideTlab);
-        long outsideTlabMinTimeStamp = computeMinTimeStampInMs(outsideTlab);
-        long minTimeStampInMs = Math.min(insideTlabMinTimeStamp, outsideTlabMinTimeStamp);
-        // max timestamp of either events
-        long insideTlabMaxTimeStamp = computeMaxTimeStampInMs(insideTlab);
-        long outsideTlabMaxTimeStamp = computeMaxTimeStampInMs(outsideTlab);
-        long maxTimeStampInMs = Math.max(insideTlabMaxTimeStamp, outsideTlabMaxTimeStamp);
-        // calculate duration
+
+        long minTimeStampInMs = searchMinTimeStampInMs(insideTlab, outsideTlab);
+
+        long maxTimeStampInMs = searchMaxTimeStampInMs(insideTlab, outsideTlab);
+
         if (minTimeStampInMs > maxTimeStampInMs) {
             throw new ArithmeticException("Allocation duration cannot be negative");
         }
+
         return maxTimeStampInMs - minTimeStampInMs;
+
+    }
+
+    private static long searchMaxTimeStampInMs(IItemCollection insideTlab, IItemCollection outsideTlab) {
+        long insideTlabMaxTimeStamp = computeMaxTimeStampInMs(insideTlab);
+        long outsideTlabMaxTimeStamp = computeMaxTimeStampInMs(outsideTlab);
+        return Math.max(insideTlabMaxTimeStamp, outsideTlabMaxTimeStamp);
+    }
+
+    private static long searchMinTimeStampInMs(IItemCollection insideTlab, IItemCollection outsideTlab) {
+        long insideTlabMinTimeStamp = computeMinTimeStampInMs(insideTlab);
+        long outsideTlabMinTimeStamp = computeMinTimeStampInMs(outsideTlab);
+
+        return Math.min(insideTlabMinTimeStamp, outsideTlabMinTimeStamp);
     }
 
     private static long computeMinTimeStampInMs(IItemCollection allocationEvents)
