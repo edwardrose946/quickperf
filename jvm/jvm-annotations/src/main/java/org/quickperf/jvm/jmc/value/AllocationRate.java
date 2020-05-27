@@ -130,15 +130,13 @@ public class AllocationRate {
         IType<IItem> type = (IType<IItem>) allocationEvent.getType();
         IMemberAccessor<IQuantity, IItem> endTimeAccessor = JfrAttributes.END_TIME.getAccessor(type);
         IQuantity quantityEndTime = endTimeAccessor.getMember(allocationEvent);
-        long timeStampInMs;
 
         try {
-            timeStampInMs = quantityEndTime.longValueIn(UnitLookup.EPOCH_MS);
+            return quantityEndTime.longValueIn(UnitLookup.EPOCH_MS);
         } catch (QuantityConversionException e) {
             throw new ArithmeticException("Unable to convert the timestamp of an allocation event into ms.");
         }
 
-        return timeStampInMs;
     }
 
 }
