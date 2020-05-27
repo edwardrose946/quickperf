@@ -44,6 +44,9 @@ public class AllocationRate {
         double allocationRateInBytesPerSecond;
         try {
             allocationRateInBytesPerSecond = computeAllocationRateInBytesPerSecond(jfrEvents);
+            if(allocationRateInBytesPerSecond == 0) {
+                return " ";
+            }
         } catch (ArithmeticException exception) {
             exception.printStackTrace();
             return " ";
@@ -60,7 +63,7 @@ public class AllocationRate {
         if (allocationDurationInSeconds > 0) {
             return totalAllocationInBytes / allocationDurationInSeconds;
         } else if (allocationDurationInSeconds == 0) {
-            throw new ArithmeticException("Division by zero");
+            return 0;
         } else {
             throw new ArithmeticException("Allocation duration cannot be negative");
         }
@@ -97,7 +100,6 @@ public class AllocationRate {
     private static long searchMinTimeStampInMs(IItemCollection insideTlab, IItemCollection outsideTlab) {
         long insideTlabMinTimeStamp = computeMinTimeStampInMs(insideTlab);
         long outsideTlabMinTimeStamp = computeMinTimeStampInMs(outsideTlab);
-
         return Math.min(insideTlabMinTimeStamp, outsideTlabMinTimeStamp);
     }
 
