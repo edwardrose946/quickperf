@@ -26,7 +26,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.quickperf.jvm.jmc.value.AllocationRate.formatAsString;
 
 public class AllocationRateTest {
 
@@ -42,12 +41,11 @@ public class AllocationRateTest {
   private IMemberAccessor mockedIMemberAccessor;
   private IQuantity mockedIQuantity;
 
-
   /**
    * Set up an IItemCollection of jfr events.
-   *
+   * <p>
    * Set up the jfrEvents with a total allocation value of 1 KiB.
-   *
+   * <p>
    * The first three values returned from mockedIQuantity.longValueIn() are used in minTimeStamp()
    * of allocation events inside Tlab.The next three elements are used in minTimeStamp() of
    * allocation events outside Tlab.
@@ -97,24 +95,24 @@ public class AllocationRateTest {
     when(mockedJfrEvents.apply(JdkFilters.ALLOC_OUTSIDE_TLAB)).thenReturn(mockedJfrEvents);
 
     when(mockedJfrEvents.iterator())
-        .thenReturn(mockedJfrEventsIterator, mockedJfrEventsIterator, mockedJfrEventsIterator,
-            mockedJfrEventsIterator);
+            .thenReturn(mockedJfrEventsIterator, mockedJfrEventsIterator, mockedJfrEventsIterator,
+                    mockedJfrEventsIterator);
     when(mockedJfrEventsIterator.next())
-        .thenReturn(mockedAllocationEvents, mockedAllocationEvents, mockedAllocationEvents,
-            mockedAllocationEvents);
+            .thenReturn(mockedAllocationEvents, mockedAllocationEvents, mockedAllocationEvents,
+                    mockedAllocationEvents);
     when(mockedJfrEventsIterator.hasNext())
-        .thenReturn(true, false, true, false, true, false, true, false);
+            .thenReturn(true, false, true, false, true, false, true, false);
 
     when(mockedAllocationEvents.iterator())
-        .thenReturn(mockedAllocationEventsIterator, mockedAllocationEventsIterator,
-            mockedAllocationEventsIterator,
-            mockedAllocationEventsIterator);
+            .thenReturn(mockedAllocationEventsIterator, mockedAllocationEventsIterator,
+                    mockedAllocationEventsIterator,
+                    mockedAllocationEventsIterator);
     when(mockedAllocationEventsIterator.next())
-        .thenReturn(mockedEvent, mockedEvent2, mockedEvent3, mockedEvent, mockedEvent2,
-            mockedEvent3, mockedEvent, mockedEvent2, mockedEvent3);
+            .thenReturn(mockedEvent, mockedEvent2, mockedEvent3, mockedEvent, mockedEvent2,
+                    mockedEvent3, mockedEvent, mockedEvent2, mockedEvent3);
     when(mockedAllocationEventsIterator.hasNext())
-        .thenReturn(true, true, true, false, true, true, true, false, true, true, true, false, true,
-            true, true, false);
+            .thenReturn(true, true, true, false, true, true, true, false, true, true, true, false, true,
+                    true, true, false);
 
     when(mockedEvent.getType()).thenReturn(mockedIType);
     when(mockedEvent2.getType()).thenReturn(mockedIType);
@@ -125,8 +123,8 @@ public class AllocationRateTest {
     when(mockedIMemberAccessor.getMember(any(IItem.class))).thenReturn(mockedIQuantity);
 
     when(mockedIQuantity.longValueIn(UnitLookup.EPOCH_MS))
-          .thenReturn(1000L, 2000L, 3000L, 10_000L, 10_000L, 11_000L, 1000L, 2000L, 3000L, 10000L,
-              11000L, 11000L);
+            .thenReturn(1000L, 2000L, 3000L, 10_000L, 10_000L, 11_000L, 1000L, 2000L, 3000L, 10000L,
+                    11000L, 11000L);
   }
 
   /**
@@ -137,7 +135,8 @@ public class AllocationRateTest {
 
     when(mockedTotalAlloc.longValue()).thenReturn(1024L);
 
-    assertThat(formatAsString(mockedJfrEvents)).isEqualTo("102.4 bytes/s");
+    assertThat(ProfilingInfo.ALLOCATION_RATE.formatAsString(mockedJfrEvents))
+            .isEqualTo("102.4 bytes/s");
 
   }
 
@@ -149,7 +148,8 @@ public class AllocationRateTest {
 
     when(mockedTotalAlloc.longValue()).thenReturn(1024L * 1024L);
 
-    assertThat(formatAsString(mockedJfrEvents)).isEqualTo("102.4 KiB/s");
+    assertThat(ProfilingInfo.ALLOCATION_RATE.formatAsString(mockedJfrEvents))
+            .isEqualTo("102.4 KiB/s");
 
   }
 
@@ -161,7 +161,8 @@ public class AllocationRateTest {
 
     when(mockedTotalAlloc.longValue()).thenReturn((long) Math.pow(1024L, 3));
 
-    assertThat(formatAsString(mockedJfrEvents)).isEqualTo("102.4 MiB/s");
+    assertThat(ProfilingInfo.ALLOCATION_RATE.formatAsString(mockedJfrEvents))
+            .isEqualTo("102.4 MiB/s");
 
   }
 
@@ -173,7 +174,8 @@ public class AllocationRateTest {
 
     when(mockedTotalAlloc.longValue()).thenReturn((long) Math.pow(1024, 4));
 
-    assertThat(formatAsString(mockedJfrEvents)).isEqualTo("102.4 GiB/s");
+    assertThat(ProfilingInfo.ALLOCATION_RATE.formatAsString(mockedJfrEvents))
+            .isEqualTo("102.4 GiB/s");
 
   }
 
@@ -185,11 +187,12 @@ public class AllocationRateTest {
 
     when(mockedTotalAlloc.longValue()).thenReturn(1000L);
     when(mockedIQuantity.longValueIn(UnitLookup.EPOCH_MS))
-          .thenReturn(0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
-              0L);
+            .thenReturn(0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
+                    0L);
 
-    assertThat(formatAsString(mockedJfrEvents)).isEqualTo(" ");
+    assertThat(ProfilingInfo.ALLOCATION_RATE.formatAsString(mockedJfrEvents))
+            .isEqualTo(" ");
 
   }
-  
+
 }

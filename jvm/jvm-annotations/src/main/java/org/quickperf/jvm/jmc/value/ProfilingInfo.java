@@ -16,6 +16,9 @@ import org.openjdk.jmc.common.item.IAggregator;
 import org.openjdk.jmc.common.item.IItemCollection;
 import org.openjdk.jmc.common.unit.IQuantity;
 import org.openjdk.jmc.flightrecorder.jdk.JdkAggregators;
+import org.quickperf.jvm.jmc.value.allocationrate.AllocationRate;
+import org.quickperf.jvm.jmc.value.allocationrate.AllocationRateFormatter;
+import org.quickperf.jvm.jmc.value.allocationrate.AllocationRateRetriever;
 
 public enum ProfilingInfo {
 
@@ -285,7 +288,13 @@ public enum ProfilingInfo {
     ALLOCATION_RATE {
         @Override
         public String formatAsString(IItemCollection jfrEvents) {
-            return AllocationRate.formatAsString(jfrEvents);
+
+
+            AllocationRate allocationRate = AllocationRateRetriever.INSTANCE
+                                           .retrieveAllocationRateFrom(jfrEvents);
+
+            return AllocationRateFormatter.INSTANCE.format(allocationRate);
+
         }
 
         @Override

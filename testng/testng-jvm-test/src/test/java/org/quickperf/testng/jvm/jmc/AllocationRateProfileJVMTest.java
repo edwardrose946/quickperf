@@ -18,4 +18,5 @@ public class AllocationRateProfileJVMTest {
   public void allocationRateProfileJVMAnnotationNoAllocationInMethod() {
     //nothing
   }
+
 }

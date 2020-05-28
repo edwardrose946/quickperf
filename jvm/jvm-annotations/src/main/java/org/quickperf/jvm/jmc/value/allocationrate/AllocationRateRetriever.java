@@ -9,72 +9,47 @@
  * Copyright 2019-2020 the original author or authors.
  */
 
-package org.quickperf.jvm.jmc.value;
+package org.quickperf.jvm.jmc.value.allocationrate;
 
-import org.openjdk.jmc.common.item.IItem;
-import org.openjdk.jmc.common.item.IItemCollection;
-import org.openjdk.jmc.common.item.IItemIterable;
-import org.openjdk.jmc.common.item.IMemberAccessor;
-import org.openjdk.jmc.common.item.IType;
+import org.openjdk.jmc.common.item.*;
 import org.openjdk.jmc.common.unit.IQuantity;
 import org.openjdk.jmc.common.unit.QuantityConversionException;
 import org.openjdk.jmc.common.unit.UnitLookup;
 import org.openjdk.jmc.flightrecorder.JfrAttributes;
 import org.openjdk.jmc.flightrecorder.jdk.JdkAggregators;
 import org.openjdk.jmc.flightrecorder.jdk.JdkFilters;
-import org.quickperf.jvm.allocation.ByteAllocationMeasureFormatter;
 
-/**
- * Class containing methods that calculate the allocation rate and format the output.
- */
-public class AllocationRate {
+public class AllocationRateRetriever {
 
-    /**
-     * Calculate the allocation rate (per ms) from the collection of Java Flight Recorder Events,
-     * format and return as a String.
-     *
-     * @param jfrEvents IItemCollection jfrEvents
-     * @return allocation rate (per second) as a String
-     */
-    public static String formatAsString(IItemCollection jfrEvents) {
+    public static final AllocationRateRetriever INSTANCE = new AllocationRateRetriever();
 
-        double allocationRateInBytesPerSecond;
+    private AllocationRateRetriever() { }
+
+    public AllocationRate retrieveAllocationRateFrom(IItemCollection jfrEvents) {
+
+        long allocationDurationInMs;
         try {
-            allocationRateInBytesPerSecond = computeAllocationRateInBytesPerSecond(jfrEvents);
-            if (allocationRateInBytesPerSecond == 0) {
-                return " ";
-            }
-        } catch (ArithmeticException exception) {
-            exception.printStackTrace();
-            return " ";
+            allocationDurationInMs = computeAllocationDurationInMs(jfrEvents);
+        } catch (QuantityConversionException e) {
+            return AllocationRate.NONE;
         }
-        return ByteAllocationMeasureFormatter.INSTANCE.shortFormat(allocationRateInBytesPerSecond) + "/s";
-
-    }
-
-    private static double computeAllocationRateInBytesPerSecond(IItemCollection jfrEvents)
-            throws ArithmeticException {
-
-        long allocationDurationInMs = computeAllocationDurationInMs(jfrEvents);
 
         if (allocationDurationInMs == 0) {
-            return 0;
+            return AllocationRate.NONE;
         }
-
-        double allocationDurationInSeconds = allocationDurationInMs / 1000.0;
 
         long totalAllocationInBytes = computeTotalAllocationInBytes(jfrEvents);
 
-        return totalAllocationInBytes / allocationDurationInSeconds;
-
+        return new AllocationRate(totalAllocationInBytes, allocationDurationInMs);
     }
 
-    private static long computeTotalAllocationInBytes(IItemCollection jfrEvents) {
+
+    private long computeTotalAllocationInBytes(IItemCollection jfrEvents) {
         IQuantity totalAlloc = jfrEvents.getAggregate(JdkAggregators.ALLOCATION_TOTAL);
         return totalAlloc.longValue();
     }
 
-    private static long computeAllocationDurationInMs(IItemCollection jfrEvents) throws ArithmeticException {
+    private long computeAllocationDurationInMs(IItemCollection jfrEvents) throws QuantityConversionException {
 
         IItemCollection insideTlab = jfrEvents.apply(JdkFilters.ALLOC_INSIDE_TLAB);
         IItemCollection outsideTlab = jfrEvents.apply(JdkFilters.ALLOC_OUTSIDE_TLAB);
@@ -84,20 +59,20 @@ public class AllocationRate {
 
     }
 
-    private static long searchMaxTimeStampInMs(IItemCollection insideTlab, IItemCollection outsideTlab) {
+    private long searchMaxTimeStampInMs(IItemCollection insideTlab, IItemCollection outsideTlab) throws QuantityConversionException {
         long insideTlabMaxTimeStamp = computeMaxTimeStampInMs(insideTlab);
         long outsideTlabMaxTimeStamp = computeMaxTimeStampInMs(outsideTlab);
         return Math.max(insideTlabMaxTimeStamp, outsideTlabMaxTimeStamp);
     }
 
-    private static long searchMinTimeStampInMs(IItemCollection insideTlab, IItemCollection outsideTlab) {
+    private long searchMinTimeStampInMs(IItemCollection insideTlab, IItemCollection outsideTlab) throws QuantityConversionException {
         long insideTlabMinTimeStamp = computeMinTimeStampInMs(insideTlab);
         long outsideTlabMinTimeStamp = computeMinTimeStampInMs(outsideTlab);
         return Math.min(insideTlabMinTimeStamp, outsideTlabMinTimeStamp);
     }
 
-    private static long computeMinTimeStampInMs(IItemCollection allocationEvents)
-            throws ArithmeticException {
+    private long computeMinTimeStampInMs(IItemCollection allocationEvents)
+            throws ArithmeticException, QuantityConversionException {
         long minTimeStamp = Long.MAX_VALUE;
         for (IItemIterable jfrEventCollection : allocationEvents) {
             for (IItem item : jfrEventCollection) {
@@ -108,8 +83,8 @@ public class AllocationRate {
         return minTimeStamp;
     }
 
-    private static long computeMaxTimeStampInMs(IItemCollection allocationEvents)
-            throws ArithmeticException {
+    private long computeMaxTimeStampInMs(IItemCollection allocationEvents)
+            throws ArithmeticException, QuantityConversionException {
         long maxTimeStamp = 0;
         for (IItemIterable jfrEventCollection : allocationEvents) {
             for (IItem item : jfrEventCollection) {
@@ -121,18 +96,14 @@ public class AllocationRate {
     }
 
     @SuppressWarnings("unchecked")
-    private static long getTimeStampInMs(IItem allocationEvent) throws ArithmeticException {
+    private long getTimeStampInMs(IItem allocationEvent) throws ArithmeticException, QuantityConversionException {
 
         IType<IItem> type = (IType<IItem>) allocationEvent.getType();
 
         IMemberAccessor<IQuantity, IItem> endTimeAccessor = JfrAttributes.END_TIME.getAccessor(type);
         IQuantity quantityEndTime = endTimeAccessor.getMember(allocationEvent);
 
-        try {
-            return quantityEndTime.longValueIn(UnitLookup.EPOCH_MS);
-        } catch (QuantityConversionException e) {
-            throw new ArithmeticException("Unable to convert the timestamp of an allocation event into ms.");
-        }
+        return quantityEndTime.longValueIn(UnitLookup.EPOCH_MS);
 
     }
 
