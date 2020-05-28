@@ -203,15 +203,6 @@ public class AllocationRateTest {
   }
 
   @Test
-  public void should_return_a_blank_string_if_null_item_collection() {
-
-    IItemCollection nullCollection = null;
-
-    assertThat(formatAsString(nullCollection)).isEqualTo(" ");
-
-  }
-
-  @Test
   public void should_return_a_blank_string_if_no_jfr_event() {
 
     when(mockedJfrEvents.hasItems()).thenReturn(true, false, false);
