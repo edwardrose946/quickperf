@@ -78,10 +78,6 @@ public class AllocationRate {
         IItemCollection insideTlab = jfrEvents.apply(JdkFilters.ALLOC_INSIDE_TLAB);
         IItemCollection outsideTlab = jfrEvents.apply(JdkFilters.ALLOC_OUTSIDE_TLAB);
 
-        if (!outsideTlab.hasItems() && !insideTlab.hasItems()) {
-            throw new ArithmeticException("No allocation events");
-        }
-
         long minTimeStampInMs = searchMinTimeStampInMs(insideTlab, outsideTlab);
 
         long maxTimeStampInMs = searchMaxTimeStampInMs(insideTlab, outsideTlab);
