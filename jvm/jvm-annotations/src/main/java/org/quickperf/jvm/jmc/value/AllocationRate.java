@@ -37,6 +37,7 @@ public class AllocationRate {
      * @return allocation rate (per second) as a String
      */
     public static String formatAsString(IItemCollection jfrEvents) {
+
         if (jfrEvents == null || !jfrEvents.hasItems()) {
             return " ";
         }
@@ -44,7 +45,7 @@ public class AllocationRate {
         double allocationRateInBytesPerSecond;
         try {
             allocationRateInBytesPerSecond = computeAllocationRateInBytesPerSecond(jfrEvents);
-            if(allocationRateInBytesPerSecond == 0) {
+            if (allocationRateInBytesPerSecond == 0) {
                 return " ";
             }
         } catch (ArithmeticException exception) {
@@ -57,16 +58,18 @@ public class AllocationRate {
 
     private static double computeAllocationRateInBytesPerSecond(IItemCollection jfrEvents)
             throws ArithmeticException {
+
         long totalAllocationInBytes = computeTotalAllocationInBytes(jfrEvents);
         long allocationDurationInMs = computeAllocationDurationInMs(jfrEvents);
+
         double allocationDurationInSeconds = allocationDurationInMs / 1000.0;
-        if (allocationDurationInSeconds > 0) {
-            return totalAllocationInBytes / allocationDurationInSeconds;
-        } else if (allocationDurationInSeconds == 0) {
+
+        if (allocationDurationInSeconds == 0) {
             return 0;
-        } else {
-            throw new ArithmeticException("Allocation duration cannot be negative");
         }
+
+        return totalAllocationInBytes / allocationDurationInSeconds;
+
     }
 
     private static long computeTotalAllocationInBytes(IItemCollection jfrEvents) {

@@ -193,31 +193,6 @@ public class AllocationRateTest {
   }
 
   @Test
-  public void should_return_a_blank_message_if_negative_maximum_time_stamps() throws QuantityConversionException {
-
-    when(mockedTotalAlloc.longValue()).thenReturn(1000L);
-    when(mockedIQuantity.longValueIn(UnitLookup.EPOCH_MS))
-          .thenReturn(10L, 10L, 10L, 10L, 10L, 10L, -10L, -10L, -10L, -10L, -10L,
-              -10L);
-
-    assertThat(formatAsString(mockedJfrEvents)).isEqualTo(" ");
-
-  }
-
-  @Test
-  public void should_return_an_blank_message_if_minimum_time_stamps_greater_than_maximum_time_stamps() throws QuantityConversionException {
-
-    when(mockedTotalAlloc.longValue()).thenReturn(1000L);
-    when(mockedIQuantity.longValueIn(UnitLookup.EPOCH_MS))
-          .thenReturn(10L, 10L, 10L, 10L, 10L, 10L, 5L, 5L, 5L, 5L, 5L,
-              5L);
-
-    assertThat(formatAsString(mockedJfrEvents))
-            .isEqualTo(" ");
-
-  }
-
-  @Test
   public void formatStringOfEmptyCollection() {
 
     IItemCollection empty = mock(IItemCollection.class);
