@@ -130,9 +130,11 @@ public class AllocationRate {
         return maxTimeStamp;
     }
 
+    @SuppressWarnings("unchecked")
     private static long getTimeStampInMs(IItem allocationEvent) throws ArithmeticException {
 
         IType<IItem> type = (IType<IItem>) allocationEvent.getType();
+
         IMemberAccessor<IQuantity, IItem> endTimeAccessor = JfrAttributes.END_TIME.getAccessor(type);
         IQuantity quantityEndTime = endTimeAccessor.getMember(allocationEvent);
 
