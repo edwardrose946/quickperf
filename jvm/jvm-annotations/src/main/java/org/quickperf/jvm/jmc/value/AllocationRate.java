@@ -38,10 +38,6 @@ public class AllocationRate {
      */
     public static String formatAsString(IItemCollection jfrEvents) {
 
-        if (jfrEvents == null || !jfrEvents.hasItems()) {
-            return " ";
-        }
-
         double allocationRateInBytesPerSecond;
         try {
             allocationRateInBytesPerSecond = computeAllocationRateInBytesPerSecond(jfrEvents);

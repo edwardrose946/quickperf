@@ -191,24 +191,5 @@ public class AllocationRateTest {
     assertThat(formatAsString(mockedJfrEvents)).isEqualTo(" ");
 
   }
-
-  @Test
-  public void formatStringOfEmptyCollection() {
-
-    IItemCollection empty = mock(IItemCollection.class);
-    when(empty.hasItems()).thenReturn(false);
-
-    assertThat(formatAsString(empty)).isEqualTo(" ");
-
-  }
-
-  @Test
-  public void should_return_a_blank_string_if_no_jfr_event() {
-
-    when(mockedJfrEvents.hasItems()).thenReturn(true, false, false);
-
-    assertThat(formatAsString(mockedJfrEvents)).isEqualTo(" ");
-
-  }
-
+  
 }
