@@ -79,11 +79,8 @@ public class AllocationRate {
         IItemCollection insideTlab = jfrEvents.apply(JdkFilters.ALLOC_INSIDE_TLAB);
         IItemCollection outsideTlab = jfrEvents.apply(JdkFilters.ALLOC_OUTSIDE_TLAB);
 
-        long minTimeStampInMs = searchMinTimeStampInMs(insideTlab, outsideTlab);
-
-        long maxTimeStampInMs = searchMaxTimeStampInMs(insideTlab, outsideTlab);
-
-        return maxTimeStampInMs - minTimeStampInMs;
+        return    searchMaxTimeStampInMs(insideTlab, outsideTlab)
+                - searchMinTimeStampInMs(insideTlab, outsideTlab);
 
     }
 
