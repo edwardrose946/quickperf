@@ -55,14 +55,15 @@ public class AllocationRate {
     private static double computeAllocationRateInBytesPerSecond(IItemCollection jfrEvents)
             throws ArithmeticException {
 
-        long totalAllocationInBytes = computeTotalAllocationInBytes(jfrEvents);
         long allocationDurationInMs = computeAllocationDurationInMs(jfrEvents);
+
+        if (allocationDurationInMs == 0) {
+            return 0;
+        }
 
         double allocationDurationInSeconds = allocationDurationInMs / 1000.0;
 
-        if (allocationDurationInSeconds == 0) {
-            return 0;
-        }
+        long totalAllocationInBytes = computeTotalAllocationInBytes(jfrEvents);
 
         return totalAllocationInBytes / allocationDurationInSeconds;
 
